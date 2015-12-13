@@ -14,7 +14,9 @@ It uses no specific extension and is freely available on [Ledger Unplugged](http
 
 # Installing 
 
-Either load the CAP file using your favorite third party software or refer to [Fidesmo Gradle Plugin](https://github.com/fidesmo/gradle-javacard) to use on the Fidesmo platform 
+Either load the CAP file using your favorite third party software or refer to [Fidesmo Gradle Plugin](https://github.com/fidesmo/gradle-javacard) to use on the Fidesmo platform
+
+ 
 The following install parameters are expected : 
 
   - 1 byte flag : provide 01 to pass the current [Fido NFC interoperability tests](https://github.com/google/u2f-ref-code/tree/master/u2f-tests), or 00 
