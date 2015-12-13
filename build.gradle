@@ -1,0 +1,27 @@
+apply plugin: 'javacard'
+
+buildscript {
+    repositories {
+        maven { url 'http://snapshots.marmeladburk.fidesmo.com/' }
+    }
+
+    dependencies {
+        classpath 'com.fidesmo:gradle-javacard:0.2.7-SNAPSHOT'
+    }
+}
+
+javacard {
+
+    sdkVersion = '3.0.4'
+
+    cap {
+         aid = '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x50:0x01'
+         packageName = 'com.ledger.u2f'
+         applet {
+            aid = '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x49:0x01'
+            className = 'U2FApplet'
+         }
+         version = '1.0'
+     }
+}
+
