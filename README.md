@@ -9,7 +9,7 @@ It uses no specific extension and is freely available on [Ledger Unplugged](http
 
 # Building 
 
-  - Set the environment variable `JC_HOME` to the folder containg the JavaCard Development Kit 
+  - Set the environment variable `JC_HOME` to the folder containg the [Java Card Development Kit 3.0.2](http://www.oracle.com/technetwork/java/embedded/javacard/downloads/index.html)
   - Run `gradle convertJavacard`
 
 # Installing 
