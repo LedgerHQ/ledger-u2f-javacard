@@ -29,6 +29,12 @@ Before using the applet, the attestation certificate shall be loaded using a pro
 | --- | --- | ------------- | ------------ | ----------------------- |
 | F0  | 01  | offset (high) | offset (low) | Certificate data chunk  | 
 
+# Testing on Android 
+
+  - Download [Google Authenticator](https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2)
+  - Test on http://u2fdemo.appspot.com or https://demo.yubico.com/u2f from Chrome
+  - For additional API reference and implementations, check [the reference code](https://github.com/google/u2f-ref-code), the [beta NFC API](https://github.com/google/u2f-ref-code/blob/no-extension/u2f-gae-demo/war/js/u2f-api.js) and [Yubico guide](https://www.yubico.com/applications/fido/) 
+  
 # License
 
 This application is licensed under [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
