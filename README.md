@@ -5,7 +5,7 @@ Ledger U2F Applet
 
 This applet is a Java Card implementation of the [FIDO Alliance U2F standard](https://fidoalliance.org/)
 
-It uses no specific extension and is freely available on [Ledger Unplugged](https://www.ledgerwallet.com/products/6-ledger-unplugged) through [Fidesmo store](http://www.fidesmo.com/apps/4f97a2e9)
+It uses no specific extension and is freely available on [Ledger Unplugged](https://www.ledgerwallet.com/products/6-ledger-unplugged) and for a small fee on other Fidesmo devices through [Fidesmo store](http://www.fidesmo.com/apps/4f97a2e9)
 
 # Building 
 
