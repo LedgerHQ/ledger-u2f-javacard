@@ -10,7 +10,7 @@ It uses no proprietary vendor API and is freely available on [Ledger Unplugged](
 # Building 
 
   - Set the environment variable `JC_HOME` to the folder containg the [Java Card Development Kit 3.0.2](http://www.oracle.com/technetwork/java/embedded/javacard/downloads/index.html)
-  - Run `gradle convertJavacard`
+  - Run `gradlew convertJavacard`
 
 # Installing 
 
@@ -34,6 +34,10 @@ Before using the applet, the attestation certificate shall be loaded using a pro
   - Download [Google Authenticator](https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2)
   - Test on http://u2fdemo.appspot.com or https://demo.yubico.com/u2f from Chrome
   - For additional API reference and implementations, check [the reference code](https://github.com/google/u2f-ref-code), the [beta NFC API](https://github.com/google/u2f-ref-code/blob/no-extension/u2f-gae-demo/war/js/u2f-api.js) and [Yubico guide](https://www.yubico.com/applications/fido/) 
+
+# Certification
+
+This implementation has been certified FIDO U2F compliant on December 17, 2015 (U2F100020151217001). See tag [u2f-certif-171215](https://github.com/LedgerHQ/ledger-u2f-javacard/tree/u2f-certif-171215)
   
 # License
 
