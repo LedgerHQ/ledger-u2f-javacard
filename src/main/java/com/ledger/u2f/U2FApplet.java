@@ -61,12 +61,27 @@ public class U2FApplet extends Applet implements ExtendedLength {
     private static final byte FIDO_ADM_SET_ATTESTATION_CERT = (byte)0x01;
 
     private static final byte SCRATCH_TRANSPORT_STATE = (byte)0;
-    private static final byte SCRATCH_REMAINING_OFFSET = (byte)1;
-    private static final byte SCRATCH_PAD = (byte)3;
-    private static final short SCRATCH_PAD_SIZE = (short)75;
+    private static final byte SCRATCH_CURRENT_OFFSET = (byte)1;
+    private static final byte SCRATCH_NONCERT_LENGTH = (byte)3;
+    private static final byte SCRATCH_INCLUDE_CERT = (byte)5;
+    private static final byte SCRATCH_SIGNATURE_LENGTH = (byte)6;
+    private static final byte SCRATCH_FULL_LENGTH = (byte)8;
+    private static final byte SCRATCH_PAD = (byte)10;
+    // Should hold 1 (version) + 65 (public key) + 1 (key handle length) + L (key handle) + largest signature
+    private static final short ENROLL_FIXED_RESPONSE_SIZE = (short)(1 + 65 + 1);    
+    private static final short KEYHANDLE_MAX = (short)64; // Update if you change the KeyHandle encoding implementation
+    private static final short SIGNATURE_MAX = (short)72; // DER encoding with negative R and S
+    private static final short SCRATCH_PAD_SIZE = (short)(ENROLL_FIXED_RESPONSE_SIZE + KEYHANDLE_MAX + SIGNATURE_MAX); 
+    private static final short SCRATCH_PUBLIC_KEY_OFFSET = (short)(SCRATCH_PAD + 1);
+    private static final short SCRATCH_KEY_HANDLE_LENGTH_OFFSET = (short)(SCRATCH_PAD + 66);
+    private static final short SCRATCH_KEY_HANDLE_OFFSET = (short)(SCRATCH_PAD + 67);
+    private static final short SCRATCH_SIGNATURE_OFFSET = (short)(SCRATCH_PAD + ENROLL_FIXED_RESPONSE_SIZE + KEYHANDLE_MAX);
 
+    private static final byte TRANSPORT_NONE = (byte)0;
     private static final byte TRANSPORT_EXTENDED = (byte)1;
     private static final byte TRANSPORT_NOT_EXTENDED = (byte)2;
+    private static final byte TRANSPORT_NOT_EXTENDED_CERT = (byte)3;
+    private static final byte TRANSPORT_NOT_EXTENDED_SIGNATURE = (byte)4;
 
     private static final byte P1_SIGN_OPERATION = (byte)0x03;
     private static final byte P1_SIGN_CHECK_ONLY = (byte)0x07;
@@ -77,8 +92,8 @@ public class U2FApplet extends Applet implements ExtendedLength {
     private static final short ENROLL_PUBLIC_KEY_OFFSET = (short)1;
     private static final short ENROLL_KEY_HANDLE_LENGTH_OFFSET = (short)66;
     private static final short ENROLL_KEY_HANDLE_OFFSET = (short)67;
-    private static final short SCRATCH_CHALLENGE_OFFSET = (short)(SCRATCH_PAD + 0);
-    private static final short SCRATCH_APPLICATION_PARAMETER_OFFSET = (short)(SCRATCH_CHALLENGE_OFFSET + 32);
+    private static final short APDU_CHALLENGE_OFFSET = (short)0;
+    private static final short APDU_APPLICATION_PARAMETER_OFFSET = (short)32;
 
     private static final byte FLAG_USER_PRESENCE_VERIFIED = (byte)0x01;
 
@@ -161,40 +176,39 @@ public class U2FApplet extends Applet implements ExtendedLength {
         }
         // Set user presence
         scratchPersistent[0] = (byte)1;
-        Util.arrayCopyNonAtomic(buffer, dataOffset, scratch, SCRATCH_PAD, (short)64);
         // Generate the key pair
         if (localPrivateTransient) {
             Secp256r1.setCommonCurveParameters(localPrivateKey);
         }
-        short keyHandleLength = fidoImpl.generateKeyAndWrap(scratch, SCRATCH_APPLICATION_PARAMETER_OFFSET, localPrivateKey, buffer, ENROLL_PUBLIC_KEY_OFFSET, buffer, ENROLL_KEY_HANDLE_OFFSET);
-        buffer[0] = ENROLL_LEGACY_VERSION;
-        buffer[ENROLL_KEY_HANDLE_LENGTH_OFFSET] = (byte)keyHandleLength;
+        short keyHandleLength = fidoImpl.generateKeyAndWrap(buffer, (short)(dataOffset + APDU_APPLICATION_PARAMETER_OFFSET), localPrivateKey, scratch, SCRATCH_PUBLIC_KEY_OFFSET, scratch, SCRATCH_KEY_HANDLE_OFFSET);
+        scratch[SCRATCH_PAD] = ENROLL_LEGACY_VERSION;
+        scratch[SCRATCH_KEY_HANDLE_LENGTH_OFFSET] = (byte)keyHandleLength;
         // Prepare the attestation
         attestationSignature.update(RFU_ENROLL_SIGNED_VERSION, (short)0, (short)1);
-        attestationSignature.update(scratch, SCRATCH_APPLICATION_PARAMETER_OFFSET, (short)32);
-        attestationSignature.update(scratch, SCRATCH_CHALLENGE_OFFSET, (short)32);
-        attestationSignature.update(buffer, ENROLL_KEY_HANDLE_OFFSET, keyHandleLength);
-        attestationSignature.update(buffer, ENROLL_PUBLIC_KEY_OFFSET, (short)65);
+        attestationSignature.update(buffer, (short)(dataOffset + APDU_APPLICATION_PARAMETER_OFFSET), (short)32);
+        attestationSignature.update(buffer, (short)(dataOffset + APDU_CHALLENGE_OFFSET), (short)32);
+        attestationSignature.update(scratch, SCRATCH_KEY_HANDLE_OFFSET, keyHandleLength);
+        attestationSignature.update(scratch, SCRATCH_PUBLIC_KEY_OFFSET, (short)65);
         outOffset = (short)(ENROLL_PUBLIC_KEY_OFFSET + 65 + 1 + keyHandleLength);
         if (extendedLength) {
             // If using extended length, the message can be completed and sent immediately
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_EXTENDED;
-            Util.arrayCopyNonAtomic(attestationCertificate, (short)0, buffer, outOffset, (short)attestationCertificate.length);
-            outOffset += (short)attestationCertificate.length;
+            outOffset = Util.arrayCopyNonAtomic(scratch, SCRATCH_PAD, buffer, (short)0, outOffset);
+            outOffset = Util.arrayCopyNonAtomic(attestationCertificate, (short)0, buffer, outOffset, (short)attestationCertificate.length);
             short signatureSize = attestationSignature.sign(buffer, (short)0, (short)0, buffer, outOffset);
             outOffset += signatureSize;
             apdu.setOutgoingAndSend((short)0, outOffset);
         }
         else {
-            // Otherwise, keep the siganture and prepare a buffer with the beginning of the certificate
-            short signatureSize = attestationSignature.sign(buffer, (short)0, (short)0, scratch, SCRATCH_PAD);
+            // Otherwise, keep the signature and proceed to send the first chunk
+            short signatureSize = attestationSignature.sign(buffer, (short)0, (short)0, scratch, SCRATCH_SIGNATURE_OFFSET);
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED;
-            short partSize = (short)(256 - outOffset);
-            Util.setShort(scratch, SCRATCH_REMAINING_OFFSET, partSize);
-            Util.arrayCopyNonAtomic(attestationCertificate, (short)0, buffer, outOffset, partSize);
-            // We safely assume that more than 256 bytes remain
-            apdu.setOutgoingAndSend((short)0, (short)256);
-            ISOException.throwIt(ISO7816.SW_BYTES_REMAINING_00);
+            Util.setShort(scratch, SCRATCH_CURRENT_OFFSET, (short)0);
+            Util.setShort(scratch, SCRATCH_SIGNATURE_LENGTH, signatureSize);
+            Util.setShort(scratch, SCRATCH_NONCERT_LENGTH, outOffset);
+            Util.setShort(scratch, SCRATCH_FULL_LENGTH, (short)(outOffset + attestationCertificate.length + signatureSize));
+            scratch[SCRATCH_INCLUDE_CERT] = (byte)1;
+            handleGetData(apdu);
         }
     }
 
@@ -206,7 +220,8 @@ public class U2FApplet extends Applet implements ExtendedLength {
         boolean sign = false;
         boolean counterOverflow = true;
         short keyHandleLength;
-        short outOffset = (short)0;
+        boolean extendedLength = (dataOffset != ISO7816.OFFSET_CDATA);
+        short outOffset = SCRATCH_PAD;
         if (len < 65) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
@@ -223,13 +238,12 @@ public class U2FApplet extends Applet implements ExtendedLength {
         if (counterOverflowed) {
             ISOException.throwIt(ISO7816.SW_FILE_FULL);
         }
-        Util.arrayCopyNonAtomic(buffer, dataOffset, scratch, SCRATCH_PAD, (short)64);
         // Verify key handle
         if (localPrivateTransient) {
             Secp256r1.setCommonCurveParameters(localPrivateKey);
         }
         keyHandleLength = (short)(buffer[(short)(dataOffset + 64)] & 0xff);
-        if (!fidoImpl.unwrap(buffer, (short)(dataOffset + 65), keyHandleLength, scratch, SCRATCH_APPLICATION_PARAMETER_OFFSET, (sign ? localPrivateKey : null))) {
+        if (!fidoImpl.unwrap(buffer, (short)(dataOffset + 65), keyHandleLength, buffer, (short)(dataOffset + APDU_APPLICATION_PARAMETER_OFFSET), (sign ? localPrivateKey : null))) {
             ISOException.throwIt(FIDO_SW_INVALID_KEY_HANDLE);
         }
         // If not signing, return with the "correct" exception
@@ -262,13 +276,28 @@ public class U2FApplet extends Applet implements ExtendedLength {
             ISOException.throwIt(ISO7816.SW_FILE_FULL);
         }
         // Prepare reply
-        buffer[outOffset++] = FLAG_USER_PRESENCE_VERIFIED;
-        outOffset = Util.arrayCopyNonAtomic(counter, (short)0, buffer, outOffset, (short)4);
+        scratch[outOffset++] = FLAG_USER_PRESENCE_VERIFIED;
+        outOffset = Util.arrayCopyNonAtomic(counter, (short)0, scratch, outOffset, (short)4);
         localSignature.init(localPrivateKey, Signature.MODE_SIGN);
-        localSignature.update(scratch, SCRATCH_APPLICATION_PARAMETER_OFFSET, (short)32);
-        localSignature.update(buffer, (short)0, (short)5);
-        outOffset += localSignature.sign(scratch, SCRATCH_CHALLENGE_OFFSET, (short)32, buffer, outOffset);
-        apdu.setOutgoingAndSend((short)0, outOffset);
+        localSignature.update(buffer, (short)(dataOffset + APDU_APPLICATION_PARAMETER_OFFSET), (short)32);
+        localSignature.update(scratch, SCRATCH_PAD, (short)5);
+        outOffset += localSignature.sign(buffer, (short)(dataOffset + APDU_CHALLENGE_OFFSET), (short)32, scratch, outOffset);
+        if (extendedLength) {
+            // If using extended length, the message can be completed and sent immediately
+            scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_EXTENDED;
+            Util.arrayCopyNonAtomic(scratch, SCRATCH_PAD, buffer, (short)0, outOffset);
+            apdu.setOutgoingAndSend((short)0, (short)(outOffset - SCRATCH_PAD));
+        }
+        else {
+            // Otherwise send the first chunk
+            scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED;
+            Util.setShort(scratch, SCRATCH_CURRENT_OFFSET, (short)0);
+            Util.setShort(scratch, SCRATCH_SIGNATURE_LENGTH, (short)0);
+            Util.setShort(scratch, SCRATCH_NONCERT_LENGTH, (short)(outOffset - SCRATCH_PAD));
+            Util.setShort(scratch, SCRATCH_FULL_LENGTH, (short)(outOffset - SCRATCH_PAD));
+            scratch[SCRATCH_INCLUDE_CERT] = (byte)0;
+            handleGetData(apdu);
+        }
     }
 
     private void handleVersion(APDU apdu) throws ISOException {
@@ -279,39 +308,71 @@ public class U2FApplet extends Applet implements ExtendedLength {
 
     private void handleGetData(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
-        short length = (short)(buffer[ISO7816.OFFSET_LC] & 0xff);
-        short currentOffset = Util.getShort(scratch, SCRATCH_REMAINING_OFFSET);
-        short outOffset = (short)0;
-        short signatureSize = (short)(2 + (scratch[(short)(SCRATCH_PAD + 1)] & 0xff));
-        short totalSize = (short)((short)attestationCertificate.length + signatureSize);
-        if ((scratch[SCRATCH_TRANSPORT_STATE] != TRANSPORT_NOT_EXTENDED) || (currentOffset >= totalSize)) {
-            ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        short currentOffset = Util.getShort(scratch, SCRATCH_CURRENT_OFFSET);
+        short fullLength = Util.getShort(scratch, SCRATCH_FULL_LENGTH);
+        switch(scratch[SCRATCH_TRANSPORT_STATE]) {
+            case TRANSPORT_NOT_EXTENDED:
+            case TRANSPORT_NOT_EXTENDED_CERT:
+            case TRANSPORT_NOT_EXTENDED_SIGNATURE:
+                break;
+            default:
+                ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         }
-        if (currentOffset < (short)attestationCertificate.length) {
-            short remainingAttestation = (short)(attestationCertificate.length - currentOffset);
-            short blockSize = (remainingAttestation < 256 ? remainingAttestation : 256);
+        short requestedSize = apdu.setOutgoing();
+        short outOffset = (short)0;
+        if (scratch[SCRATCH_TRANSPORT_STATE] == TRANSPORT_NOT_EXTENDED) {
+            short dataSize = Util.getShort(scratch, SCRATCH_NONCERT_LENGTH);
+            short blockSize = ((short)(dataSize - currentOffset) > requestedSize ? requestedSize : (short)(dataSize - currentOffset));
+            Util.arrayCopyNonAtomic(scratch, (short)(SCRATCH_PAD + currentOffset), buffer, outOffset, blockSize);
+            outOffset += blockSize;
+            currentOffset += blockSize;
+            fullLength -= blockSize;
+            if (currentOffset == dataSize) {
+                if (scratch[SCRATCH_INCLUDE_CERT] == (byte)1) {
+                    scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED_CERT;
+                    currentOffset = (short)0;
+                    requestedSize -= blockSize;                    
+                }
+                else {
+                    scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NONE;
+                }
+            }
+        }
+        if ((scratch[SCRATCH_TRANSPORT_STATE] == TRANSPORT_NOT_EXTENDED_CERT) && (requestedSize != (short)0)) {
+            short blockSize = ((short)(attestationCertificate.length - currentOffset) > requestedSize ? requestedSize : (short)(attestationCertificate.length - currentOffset));
             Util.arrayCopyNonAtomic(attestationCertificate, currentOffset, buffer, outOffset, blockSize);
             outOffset += blockSize;
             currentOffset += blockSize;
-        }
-        if (currentOffset >= (short)(attestationCertificate.length)) {
-            short signatureOffset = (short)(currentOffset - (short)attestationCertificate.length);
-            short remainingSignature = (short)(signatureSize - (currentOffset - (short)attestationCertificate.length));
-            short remainingBlock = (short)(256 - outOffset);
-            if (remainingBlock > remainingSignature) {
-                remainingBlock = remainingSignature;
+            fullLength -= blockSize;
+            if (currentOffset == (short)attestationCertificate.length) {
+                if (Util.getShort(scratch, SCRATCH_SIGNATURE_LENGTH) != (short)0) {
+                    scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED_SIGNATURE;
+                    currentOffset = (short)0;
+                    requestedSize -= blockSize;                
+                }
+                else {
+                    scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NONE;   
+                }
             }
-            Util.arrayCopyNonAtomic(scratch, (short)(SCRATCH_PAD + signatureOffset), buffer, outOffset, remainingBlock);
-            outOffset += remainingBlock;
-            currentOffset += remainingBlock;
         }
-        Util.setShort(scratch, SCRATCH_REMAINING_OFFSET, currentOffset);
-        apdu.setOutgoingAndSend((short)0, outOffset);
-        if ((short)(totalSize - currentOffset) > 256) {
+        if ((scratch[SCRATCH_TRANSPORT_STATE] == TRANSPORT_NOT_EXTENDED_SIGNATURE) && (requestedSize != (short)0)) {
+            short signatureSize = Util.getShort(scratch, SCRATCH_SIGNATURE_LENGTH);
+            short blockSize = ((short)(signatureSize - currentOffset) > requestedSize ? requestedSize : (short)(signatureSize - currentOffset));
+            Util.arrayCopyNonAtomic(scratch, (short)(SCRATCH_SIGNATURE_OFFSET + currentOffset), buffer, outOffset, blockSize);
+            outOffset += blockSize;
+            currentOffset += blockSize;
+            fullLength -= blockSize;
+        }                
+        apdu.setOutgoingLength(outOffset);
+        apdu.sendBytes((short)0, outOffset);        
+        Util.setShort(scratch, SCRATCH_CURRENT_OFFSET, currentOffset);
+        Util.setShort(scratch, SCRATCH_FULL_LENGTH, fullLength);
+        if (fullLength > 256) {
             ISOException.throwIt(ISO7816.SW_BYTES_REMAINING_00);
         }
-        else if ((short)(totalSize - currentOffset) != 0) {
-            ISOException.throwIt((short)(ISO7816.SW_BYTES_REMAINING_00 + totalSize - currentOffset));
+        else 
+        if (fullLength != 0) {
+            ISOException.throwIt((short)(ISO7816.SW_BYTES_REMAINING_00 + fullLength));   
         }
     }
 
