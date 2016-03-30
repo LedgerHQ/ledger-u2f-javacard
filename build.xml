@@ -4,7 +4,7 @@
     <get src="https://github.com/martinpaljak/ant-javacard/releases/download/v1.4/ant-javacard.jar" skipexisting="true" dest="."/>
     <taskdef name="javacard" classname="pro.javacard.ant.JavaCard" classpath="ant-javacard.jar"/>
     <javacard>
-      <cap output="U2FApplet.cap" sources="src" aid="a0:00:00:06:17:00:4f:97:a2:e9:50:01" versoin="1.1">
+      <cap output="U2FApplet.cap" sources="src" aid="a0:00:00:06:17:00:4f:97:a2:e9:50:01" version="1.1">
         <applet class="com.ledger.u2f.U2FApplet" aid="a0:00:00:06:17:00:4f:97:a2:e9:49:01"/>
       </cap>
     </javacard>
