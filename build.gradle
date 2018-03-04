@@ -1,27 +1,87 @@
-apply plugin: 'javacard'
+group 'ledger-u2f-javacard'
+version '1.0-SNAPSHOT'
 
+// Buildscript configuration for the javacard-gradle plugin.
+// Do not modify this particular block. Dependencies for the project are lower.
 buildscript {
     repositories {
-        maven { url 'http://snapshots.marmeladburk.fidesmo.com/' }
+        mavenCentral()
     }
-
     dependencies {
-        classpath 'com.fidesmo:gradle-javacard:0.2.7-SNAPSHOT'
+        classpath 'com.klinec:gradle-javacard:1.5.5'
     }
 }
 
+apply plugin: 'javacard'
+sourceCompatibility = 1.7
+
+// Common settings, definitions
+final def rootPath = rootDir.absolutePath
+final def libs = rootPath + '/libs'
+final def libsSdk = rootPath + '/libs-sdks'
+
+// Repositories for your project
+repositories {
+    mavenCentral()
+    // mavenLocal() // for local maven repository if needed
+    flatDir {
+        dirs libs
+    }
+}
+
+// Dependencies for your project
+dependencies {
+    // testCompile group: 'junit', name: 'junit', version: '4.12'
+    // testCompile 'org.testng:testng:6.1.1'
+
+    jcardsim 'com.licel:jcardsim:3.0.4'
+}
+
+test {
+    useTestNG()
+    jvmArgs '-noverify'
+}
+
+// JavaCard SDKs and libraries
+final def JC212 = libsSdk + '/jc212_kit'
+final def JC221 = libsSdk + '/jc221_kit'
+final def JC222 = libsSdk + '/jc222_kit'
+final def JC303 = libsSdk + '/jc303_kit'
+final def JC304 = libsSdk + '/jc304_kit'
+final def JC305 = libsSdk + '/jc305u1_kit'
+
+// Which JavaCard SDK to use - select
+final def JC_SELECTED = JC304
+
 javacard {
 
-    sdkVersion = '3.0.2'
+    //noinspection GroovyAssignabilityCheck
+    config {
+        jckit JC_SELECTED
 
-    cap {
-         aid = '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x50:0x01'
-         packageName = 'com.ledger.u2f'
-         applet {
-            aid = '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x49:0x01'
-            className = 'U2FApplet'
-         }
-         version = '1.1'
-     }
+        // JCardSim automatically added by the javacard-gradle plugin
+        addSurrogateJcardSimRepo true
+        addImplicitJcardSim true
+        addImplicitJcardSimJunit true
+
+        //noinspection GroovyAssignabilityCheck
+        cap {
+            packageName 'com.ledger.u2f'
+            version '1.1'
+            aid '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x50:0x01'
+            output 'ledger-u2f.cap'
+
+            //noinspection GroovyAssignabilityCheck
+            applet {
+                className 'U2FApplet'
+                aid '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x49:0x01'
+            }
+
+            //noinspection GroovyAssignabilityCheck
+            dependencies {
+                remote 'fr.bmartel:gplatform:2.1.1'
+            }
+        }
+    }
 }
 
