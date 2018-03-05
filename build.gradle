@@ -31,14 +31,14 @@ repositories {
 
 // Dependencies for your project
 dependencies {
-    // testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
     // testCompile 'org.testng:testng:6.1.1'
 
     jcardsim 'com.licel:jcardsim:3.0.4'
 }
 
 test {
-    useTestNG()
+    // useTestNG()
     jvmArgs '-noverify'
 }
 
@@ -73,7 +73,7 @@ javacard {
 
             //noinspection GroovyAssignabilityCheck
             applet {
-                className 'U2FApplet'
+                className 'com.ledger.u2f.U2FApplet'
                 aid '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x49:0x01'
             }
 
