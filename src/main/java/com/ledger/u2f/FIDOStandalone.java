@@ -33,12 +33,12 @@ import javacard.framework.Util;
 
 public class FIDOStandalone implements FIDOAPI {
 
-    private static KeyPair keyPair;
-    private static AESKey chipKey;
-    private static Cipher cipherEncrypt;
-    private static Cipher cipherDecrypt;
-    private static RandomData random;
-    private static byte[] scratch;
+    private KeyPair keyPair;
+    private AESKey chipKey;
+    private Cipher cipherEncrypt;
+    private Cipher cipherDecrypt;
+    private RandomData random;
+    private byte[] scratch;
 
     private static final byte[] IV_ZERO_AES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
