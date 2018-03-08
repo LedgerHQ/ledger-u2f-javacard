@@ -24,7 +24,7 @@ public class U2FTest extends SimulatorTestBase {
         installData[2] = (byte) (attestationCert.length & 0xff);
         System.arraycopy(attestatioPrivkey, 0, installData, 3, 32);
 
-        prepareApplet(installData, U2FApplet.class);
+        prepareApplet(installData);
 
         CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);

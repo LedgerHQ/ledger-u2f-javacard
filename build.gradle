@@ -34,7 +34,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     // testCompile 'org.testng:testng:6.1.1'
 
-    jcardsim 'com.licel:jcardsim:3.0.4'
+    jcardsim name: 'jcardsim-3_0_5/jcardsim-3.0.5-SNAPSHOT'
 }
 
 test {
@@ -51,7 +51,7 @@ final def JC304 = libsSdk + '/jc304_kit'
 final def JC305 = libsSdk + '/jc305u1_kit'
 
 // Which JavaCard SDK to use - select
-final def JC_SELECTED = JC304
+final def JC_SELECTED = JC305
 
 javacard {
 
@@ -60,9 +60,9 @@ javacard {
         jckit JC_SELECTED
 
         // JCardSim automatically added by the javacard-gradle plugin
-        addSurrogateJcardSimRepo true
-        addImplicitJcardSim true
-        addImplicitJcardSimJunit true
+        addSurrogateJcardSimRepo false
+        addImplicitJcardSim false
+        addImplicitJcardSimJunit false
 
         //noinspection GroovyAssignabilityCheck
         cap {
@@ -75,11 +75,6 @@ javacard {
             applet {
                 className 'com.ledger.u2f.U2FApplet'
                 aid '0xa0:0x00:0x00:0x06:0x17:0x00:0x4f:0x97:0xa2:0xe9:0x49:0x01'
-            }
-
-            //noinspection GroovyAssignabilityCheck
-            dependencies {
-                remote 'fr.bmartel:gplatform:2.1.1'
             }
         }
     }

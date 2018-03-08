@@ -1,16 +1,17 @@
 package com.ledger.u2f;
 
-import com.licel.jcardsim.smartcardio.CardSimulator;
+import com.licel.jcardsim.io.JavaxSmartCardInterface;
 import javacard.framework.AID;
-import javacard.framework.Applet;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
 public class SimulatorTestBase {
-    CardSimulator sim;
-    static final AID aid = new AID(new byte[]{(byte) 0xa0, (byte) 0x00, (byte) 0x00, (byte) 0x06, (byte) 0x17, (byte) 0x00, (byte) 0x4f, (byte) 0x97, (byte) 0xa2, (byte) 0xe9, (byte) 0x49, (byte) 0x01}, (short) 0, (byte) 12);
+    JavaxSmartCardInterface sim;
+    AID aid;
+
+    static final byte[] AIDArray = {(byte) 0xa0, (byte) 0x00, (byte) 0x00, (byte) 0x06, (byte) 0x17, (byte) 0x00, (byte) 0x4f, (byte) 0x97, (byte) 0xa2, (byte) 0xe9, (byte) 0x49, (byte) 0x01};
 
     @BeforeClass
     public static void setUpClass() {
@@ -19,15 +20,21 @@ public class SimulatorTestBase {
 
     @Before
     public void setUp() {
-        //System.setProperty("com.licel.jcardsim.card.applet.0.AID", "a000000617004f97a2e94901");
-        //System.setProperty("com.licel.jcardsim.card.applet.0.Class", "com.ledger.u2f.U2FApplet");
-        sim = new CardSimulator();
+        sim = new JavaxSmartCardInterface();
     }
 
-    public AID prepareApplet(byte[] installData, Class<? extends Applet> cls) {
-        AID result = sim.installApplet(aid, cls, installData, (short) 0, (byte) installData.length);
-        sim.selectApplet(result);
-        return result;
+    public void prepareApplet(byte[] installData) {
+        aid = new AID(AIDArray, (short) 0, (byte) AIDArray.length);
+        byte[] fullData = new byte[2 + AIDArray.length + 1 + installData.length + 1];
+        int offset = 0;
+        fullData[offset++] = (byte) AIDArray.length;
+        System.arraycopy(AIDArray, 0, fullData, offset, AIDArray.length);
+        offset += AIDArray.length;
+        fullData[offset++] = 0;
+        fullData[offset++] = (byte) installData.length;
+        System.arraycopy(installData, 0, fullData, offset, installData.length);
+        aid = sim.installApplet(aid, U2FApplet.class, fullData, (short) 0, (byte) fullData.length);
+        sim.selectApplet(aid);
     }
 
     @After
