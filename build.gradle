@@ -13,6 +13,7 @@ buildscript {
 }
 
 apply plugin: 'javacard'
+apply plugin: 'jacoco'
 sourceCompatibility = 1.7
 
 // Common settings, definitions
@@ -85,3 +86,11 @@ javacard {
     }
 }
 
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
+    }
+}
+
+check.dependsOn jacocoTestReport
