@@ -19,16 +19,10 @@
 
 package com.ledger.u2f;
 
-import javacard.security.KeyBuilder;
+import javacard.security.*;
 import javacard.security.KeyPair;
-import javacard.security.ECKey;
-import javacard.security.ECPrivateKey;
-import javacard.security.ECPublicKey;
-import javacard.security.KeyPair;
-import javacard.security.AESKey;
 import javacardx.crypto.Cipher;
 import javacard.framework.JCSystem;
-import javacard.security.RandomData;
 import javacard.framework.Util;
 
 public class FIDOStandalone implements FIDOAPI {
@@ -49,10 +43,10 @@ public class FIDOStandalone implements FIDOAPI {
             (ECPrivateKey)KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PRIVATE, KeyBuilder.LENGTH_EC_FP_256, false));
         Secp256r1.setCommonCurveParameters((ECKey)keyPair.getPrivate());
         Secp256r1.setCommonCurveParameters((ECKey)keyPair.getPublic());
-        random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+        random = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         // Initialize the unique wrapping key
         chipKey = (AESKey)KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_256, false);
-        random.generateData(scratch, (short)0, (short)32);
+        random.nextBytes(scratch, (short)0, (short)32);
         chipKey.setKey(scratch, (short)0);
         cipherEncrypt = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
         cipherEncrypt.init(chipKey, Cipher.MODE_ENCRYPT, IV_ZERO_AES, (short)0, (short)IV_ZERO_AES.length);
