@@ -4,11 +4,20 @@ package com.ledger.u2f;
 import apdu4j.ISO7816;
 import org.junit.Test;
 
+import javax.security.cert.CertificateException;
+import javax.security.cert.X509Certificate;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
+import java.io.ByteArrayInputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.fail;
 
 
 public class U2FTest extends SimulatorTestBase {
@@ -17,6 +26,8 @@ public class U2FTest extends SimulatorTestBase {
     private final byte[] challenge = new byte[]{(byte) 0x41, (byte) 0x42, (byte) 0xd2, (byte) 0x1c, (byte) 0x00, (byte) 0xd9, (byte) 0x4f, (byte) 0xfb, (byte) 0x9d, (byte) 0x50, (byte) 0x4a, (byte) 0xda, (byte) 0x8f, (byte) 0x99, (byte) 0xb7, (byte) 0x21, (byte) 0xf4, (byte) 0xb1, (byte) 0x91, (byte) 0xae, (byte) 0x4e, (byte) 0x37, (byte) 0xca, (byte) 0x01, (byte) 0x40, (byte) 0xf6, (byte) 0x96, (byte) 0xb6, (byte) 0x98, (byte) 0x3c, (byte) 0xfa, (byte) 0xcb};
     private final byte[] application = new byte[]{(byte) 0xf0, (byte) 0xe6, (byte) 0xa6, (byte) 0xa9, (byte) 0x70, (byte) 0x42, (byte) 0xa4, (byte) 0xf1, (byte) 0xf1, (byte) 0xc8, (byte) 0x7f, (byte) 0x5f, (byte) 0x7d, (byte) 0x44, (byte) 0x31, (byte) 0x5b, (byte) 0x2d, (byte) 0x85, (byte) 0x2c, (byte) 0x2d, (byte) 0xf5, (byte) 0xc7, (byte) 0x99, (byte) 0x1c, (byte) 0xc6, (byte) 0x62, (byte) 0x41, (byte) 0xbf, (byte) 0x70, (byte) 0x72, (byte) 0xd1, (byte) 0xc4};
 
+    private final byte[] U2F_VERSION_RESP = {'U', '2', 'F', '_', 'V', '2', (byte) 0x90, 0x00};
+
     @Test
     public void testAttestationCertNotSet() {
         prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
@@ -24,7 +35,7 @@ public class U2FTest extends SimulatorTestBase {
         for (int ins : fidoINS) {
             CommandAPDU apdu = new CommandAPDU(0x00, ins, 0, 0);
             ResponseAPDU resp = sim.transmitCommand(apdu);
-            assertEquals(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED, resp.getSW());
+            assertThat(resp.getSW(), is(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED));
         }
     }
 
@@ -34,7 +45,7 @@ public class U2FTest extends SimulatorTestBase {
 
         CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
-        assertEquals(ISO7816.SW_NO_ERROR, certResponse.getSW());
+        assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
     }
 
     @Test
@@ -45,18 +56,81 @@ public class U2FTest extends SimulatorTestBase {
         sim.transmitCommand(certApdu);
 
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
-        assertEquals(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED, certResponse.getSW());
+        assertThat(certResponse.getSW(), is(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED));
     }
 
     @Test
     public void testSelectGivesVersion() {
         prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
 
-        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
-        sim.transmitCommand(certApdu);
+        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
 
         byte[] response = sim.selectAppletWithResult(aid);
-        byte[] expected = {'U', '2', 'F', '_', 'V', '2', (byte) 0x90, 0x00};
-        assertArrayEquals(expected, response);
+        assertThat(response, is(U2F_VERSION_RESP));
+    }
+
+    @Test
+    public void testGetVersion() {
+        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+
+        ResponseAPDU versionAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x03, 0, 0));
+        assertThat(versionAPDU.getBytes(), is(U2F_VERSION_RESP));
+    }
+
+    @Test
+    public void testEnroll() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, CertificateException {
+        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x01, 0, 0, enrollData, 65535));
+        assertThat(responseAPDU.getSW(), is(ISO7816.SW_NO_ERROR));
+
+        byte[] responseData = responseAPDU.getData();
+        assertThat(responseData[0], is((byte) 0x05));
+
+        byte[] pubKey = new byte[65];
+        System.arraycopy(responseData, 1, pubKey, 0, 65);
+
+        /*
+        X9ECParameters p256 = ECNamedCurveTable.getByName("P-256");
+        ECParameterSpec params = new ECNamedCurveSpec("P-256", p256.getCurve(), p256.getG(), p256.getN(), p256.getH());
+        ECPublicKeySpec ecPubKeySpec = new ECPublicKeySpec(ECPointUtil.decodePoint(params.getCurve(), pubKey), params);
+        KeyFactory ecKeyFactory = KeyFactory.getInstance("ECDSA");
+        ECPublicKey ecPubKey = (ECPublicKey) ecKeyFactory.generatePublic(ecPubKeySpec);
+        */
+
+        byte keyHandleLength = responseData[66];
+        byte[] keyHandle = new byte[keyHandleLength];
+        System.arraycopy(responseData, 67, keyHandle, 0, keyHandleLength);
+
+        ByteArrayInputStream certStream = new ByteArrayInputStream(responseData, 67 + keyHandleLength, responseData.length - (67 + keyHandleLength));
+        X509Certificate cert = X509Certificate.getInstance(certStream);
+        assertThat(cert.getSubjectDN().toString(), is("CN=PilotGnubby-0.4.1-47901280001155957352"));
+        assertThat(cert.getIssuerDN().toString(), is("CN=Gnubby Pilot"));
+        assertThat(cert.getVersion(), is(2));
+
+        int sigLength = certStream.available();
+        byte[] signature = new byte[sigLength];
+        System.arraycopy(responseData, responseData.length - sigLength, signature, 0, sigLength);
+
+        Signature verifier = Signature.getInstance(cert.getSigAlgName());
+        verifier.initVerify(cert.getPublicKey());
+
+        byte[] clientData = new byte[65 + keyHandleLength + 65];
+        clientData[0] = 0;
+        System.arraycopy(application, 0, clientData, 1, 32);
+        System.arraycopy(challenge, 0, clientData, 33, 32);
+        System.arraycopy(keyHandle, 0, clientData, 65, keyHandleLength);
+        System.arraycopy(pubKey, 0, clientData, 65 + keyHandleLength, 65);
+
+        verifier.update(clientData);
+
+        assertThat(verifier.verify(signature), is(true));
     }
 }
