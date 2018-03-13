@@ -17,12 +17,12 @@ import java.security.*;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNot.not;
-
+import static org.hamcrest.Matchers.*;
 
 public class U2FTest extends SimulatorTestBase {
     private final static byte[] attestatioPrivkey = new byte[]{(byte) 0xf3, (byte) 0xfc, (byte) 0xcc, (byte) 0x0d, (byte) 0x00, (byte) 0xd8, (byte) 0x03, (byte) 0x19, (byte) 0x54, (byte) 0xf9, (byte) 0x08, (byte) 0x64, (byte) 0xd4, (byte) 0x3c, (byte) 0x24, (byte) 0x7f, (byte) 0x4b, (byte) 0xf5, (byte) 0xf0, (byte) 0x66, (byte) 0x5c, (byte) 0x6b, (byte) 0x50, (byte) 0xcc, (byte) 0x17, (byte) 0x74, (byte) 0x9a, (byte) 0x27, (byte) 0xd1, (byte) 0xcf, (byte) 0x76, (byte) 0x64};
@@ -143,6 +143,82 @@ public class U2FTest extends SimulatorTestBase {
     }
 
     @Test
+    public void testEnrollGetData() throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException, InvalidKeyException, SignatureException {
+        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x01, 0, 0, enrollData));
+        assertThat(responseAPDU.getSW(), is(ISO7816.SW_BYTES_REMAINING_00));
+
+        List<byte[]> responses = new LinkedList<>();
+        int ne = 256;
+        do {
+            ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0xC0, 0, 0, ne));
+            responses.add(getDataAPDU.getData());
+            int nr = getDataAPDU.getNr();
+
+            assertThat(nr, lessThanOrEqualTo(256));
+            if (ne == 256) {
+                assertThat(getDataAPDU.getSW(), allOf(greaterThanOrEqualTo(ISO7816.SW_BYTES_REMAINING_00), lessThanOrEqualTo(ISO7816.SW_BYTES_REMAINING_00 + 256)));
+            } else {
+                assertThat(getDataAPDU.getSW(), is(ISO7816.SW_NO_ERROR));
+                break;
+            }
+
+            if (getDataAPDU.getSW() != ISO7816.SW_BYTES_REMAINING_00) {
+                ne = getDataAPDU.getSW() - ISO7816.SW_BYTES_REMAINING_00;
+            }
+
+        } while (true);
+
+        byte[] responseData = responses.stream().reduce((a, b) -> {
+            byte[] result = new byte[a.length + b.length];
+            System.arraycopy(a, 0, result, 0, a.length);
+            System.arraycopy(b, 0, result, a.length, b.length);
+            return result;
+        }).get();
+
+        byte[] pubKey = new byte[65];
+        System.arraycopy(responseData, 1, pubKey, 0, 65);
+
+        ECPublicKeySpec ecPubKeySpec = new ECPublicKeySpec(ECPointUtil.decodePoint(p256.getCurve(), pubKey), p256);
+        KeyFactory ecKeyFactory = KeyFactory.getInstance("EC");
+        ecKeyFactory.generatePublic(ecPubKeySpec);
+
+        byte keyHandleLength = responseData[66];
+        byte[] keyHandle = new byte[keyHandleLength];
+        System.arraycopy(responseData, 67, keyHandle, 0, keyHandleLength);
+
+        ByteArrayInputStream certStream = new ByteArrayInputStream(responseData, 67 + keyHandleLength, responseData.length - (67 + keyHandleLength));
+        X509Certificate cert = X509Certificate.getInstance(certStream);
+        assertThat(cert.getSubjectDN().toString(), is("CN=PilotGnubby-0.4.1-47901280001155957352"));
+        assertThat(cert.getIssuerDN().toString(), is("CN=Gnubby Pilot"));
+        assertThat(cert.getVersion(), is(2));
+
+        int sigLength = certStream.available();
+        byte[] signature = new byte[sigLength];
+        System.arraycopy(responseData, responseData.length - sigLength, signature, 0, sigLength);
+
+        Signature verifier = Signature.getInstance(cert.getSigAlgName());
+        verifier.initVerify(cert.getPublicKey());
+
+        byte[] clientData = new byte[65 + keyHandleLength + 65];
+        clientData[0] = 0;
+        System.arraycopy(application, 0, clientData, 1, 32);
+        System.arraycopy(challenge, 0, clientData, 33, 32);
+        System.arraycopy(keyHandle, 0, clientData, 65, keyHandleLength);
+        System.arraycopy(pubKey, 0, clientData, 65 + keyHandleLength, 65);
+
+        verifier.update(clientData);
+
+        assertThat(verifier.verify(signature), is(true));
+    }
+
+    @Test
     public void testSignNotEnrolled() {
         prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
 
@@ -158,7 +234,7 @@ public class U2FTest extends SimulatorTestBase {
         System.arraycopy(keyHandle, 0, signData, 65, 32);
 
         ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x02, 0x03, 0, signData, 65535));
-        assertThat(responseAPDU.getSW(), is(not(0x9000)));
+        assertThat(responseAPDU.getSW(), is(not(ISO7816.SW_NO_ERROR)));
     }
 
     @Test
@@ -187,6 +263,15 @@ public class U2FTest extends SimulatorTestBase {
         System.arraycopy(keyHandle, 0, signData, 65, keyHandleLength);
 
         ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(0x00, 0x02, 0x03, 0, signData, 65535));
-        assertThat(signResponse.getSW(), is(0x9000));
+        assertThat(signResponse.getSW(), is(ISO7816.SW_NO_ERROR));
+    }
+
+    @Test
+    public void testGetDataNoData() {
+        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0xC0, 0, 0));
+        assertThat(getDataAPDU.getSW(), is(ISO7816.SW_CONDITIONS_OF_USE_NOT_SATISFIED));
     }
 }
