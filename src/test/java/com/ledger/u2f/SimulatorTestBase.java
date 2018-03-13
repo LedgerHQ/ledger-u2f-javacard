@@ -19,7 +19,6 @@ public class SimulatorTestBase {
 
     @Before
     public void setUp() {
-
     }
 
     public void prepareApplet(byte[] installData) {
