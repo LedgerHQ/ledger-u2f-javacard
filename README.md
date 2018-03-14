@@ -1,7 +1,7 @@
 Ledger U2F Applet
 =================
 
-[![Build status](https://travis-ci.org/JavaCardSpot-dev/ledger-u2f-javacard.svg?branch=master)](https://travis-ci.org/JavaCardSpot-dev/ledger-u2f-javacard)
+[![Build status](https://travis-ci.org/JavaCardSpot-dev/ledger-u2f-javacard.svg?branch=master)](https://travis-ci.org/JavaCardSpot-dev/ledger-u2f-javacard) [![Codecov](https://img.shields.io/codecov/c/github/javacardspot-dev/ledger-u2f-javacard.svg)](https://codecov.io/gh/JavaCardSpot-dev/ledger-u2f-javacard)
 
 # Overview
 
