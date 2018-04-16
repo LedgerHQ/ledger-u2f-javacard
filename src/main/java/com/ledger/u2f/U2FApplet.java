@@ -132,6 +132,13 @@ public class U2FApplet extends Applet implements ExtendedLength {
         fidoImpl = new FIDOStandalone();
     }
 
+    /**
+     * Handle the customs attestation cert command.
+     * After it is all set, switch the flag that it is.
+     *
+     * @param apdu
+     * @throws ISOException
+     */
     private void handleSetAttestationCert(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
@@ -146,12 +153,19 @@ public class U2FApplet extends Applet implements ExtendedLength {
         }
     }
 
+    /**
+     * Handle U2F_REGISTER.
+     *
+     * @param apdu
+     * @throws ISOException
+     */
     private void handleEnroll(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
         short dataOffset = apdu.getOffsetCdata();
         boolean extendedLength = (dataOffset != ISO7816.OFFSET_CDATA);
         short outOffset;
+        // Enroll should be exactly 64 bytes
         if (len != 64) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
@@ -202,13 +216,18 @@ public class U2FApplet extends Applet implements ExtendedLength {
         }
     }
 
+    /**
+     * Handle U2F_AUTHENTICATE.
+     *
+     * @param apdu
+     * @throws ISOException
+     */
     private void handleSign(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
         short dataOffset = apdu.getOffsetCdata();
         byte p1 = buffer[ISO7816.OFFSET_P1];
         boolean sign = false;
-        boolean counterOverflow = true;
         short keyHandleLength;
         boolean extendedLength = (dataOffset != ISO7816.OFFSET_CDATA);
         short outOffset = SCRATCH_PAD;
@@ -289,12 +308,25 @@ public class U2FApplet extends Applet implements ExtendedLength {
         }
     }
 
+    /**
+     * Handle U2F_GET_VERSION.
+     *
+     * @param apdu
+     * @throws ISOException
+     */
     private void handleVersion(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         Util.arrayCopyNonAtomic(VERSION, (short) 0, buffer, (short) 0, (short) VERSION.length);
         apdu.setOutgoingAndSend((short) 0, (short) VERSION.length);
     }
 
+    /**
+     * Handle the ISO7816 GET_DATA command.
+     * Either send data from enrollment or authentication, what was last.
+     *
+     * @param apdu
+     * @throws ISOException
+     */
     private void handleGetData(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         short currentOffset = Util.getShort(scratch, SCRATCH_CURRENT_OFFSET);
