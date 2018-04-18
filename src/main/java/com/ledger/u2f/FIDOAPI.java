@@ -22,8 +22,28 @@ package com.ledger.u2f;
 import javacard.security.ECPrivateKey;
 
 public interface FIDOAPI {
-
+    /**
+     * Generate a new key pair and wrap it.
+     * @param applicationParameter
+     * @param applicationParameterOffset
+     * @param generatedPrivateKey not used
+     * @param publicKey
+     * @param publicKeyOffset
+     * @param keyHandle output array
+     * @param keyHandleOffset offset into output array
+     * @return always 64
+     */
     short generateKeyAndWrap(byte[] applicationParameter, short applicationParameterOffset, ECPrivateKey generatedPrivateKey, byte[] publicKey, short publicKeyOffset, byte[] keyHandle, short keyHandleOffset);
 
+    /**
+     * Unwrap a previously wrapped key.
+     * @param keyHandle
+     * @param keyHandleOffset
+     * @param keyHandleLength not used, assumed 64
+     * @param applicationParameter application to compare with
+     * @param applicationParameterOffset
+     * @param unwrappedPrivateKey output variable
+     * @return true if a valid key belonging to the indicated application is obtained
+     */
     boolean unwrap(byte[] keyHandle, short keyHandleOffset, short keyHandleLength, byte[] applicationParameter, short applicationParameterOffset, ECPrivateKey unwrappedPrivateKey);
 }

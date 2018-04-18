@@ -19,8 +19,20 @@
 
 package com.ledger.u2f;
 
+/**
+ * Utlity functions.
+ */
 public class FIDOUtils {
 
+    /**
+     * Comparison resistant to timing analysis.
+     * @param array1
+     * @param array1Offset
+     * @param array2
+     * @param array2Offset
+     * @param length
+     * @return true if the indicated number of bytes of the arrays starting at given offsets are equal
+     */
     public static boolean compareConstantTime(byte[] array1, short array1Offset, byte[] array2, short array2Offset, short length) {
         short givenLength = length;
         byte status = (byte) 0;

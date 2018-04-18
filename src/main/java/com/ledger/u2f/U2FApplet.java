@@ -26,6 +26,9 @@ import javacard.security.KeyBuilder;
 import javacard.security.Signature;
 import javacardx.apdu.ExtendedLength;
 
+/**
+ * The FIDO U2F applet.
+ */
 public class U2FApplet extends Applet implements ExtendedLength {
 
     private static byte flags;
@@ -95,10 +98,14 @@ public class U2FApplet extends Applet implements ExtendedLength {
 
     private static final byte INSTALL_FLAG_DISABLE_USER_PRESENCE = (byte) 0x01;
 
-    // Parameters
-    // 1 byte : flags
-    // 2 bytes big endian short : length of attestation certificate
-    // 32 bytes : private attestation key
+    /**
+     * Applet setup which sets flags, attestation certificate length and private attestation key.
+     * Structure of the parameters array (starting at parametersOffset):
+     * flags (1 byte), length of attestation certificate (2 bytes big endian short), private attestation key (32 bytes).
+     * @param parameters
+     * @param parametersOffset
+     * @param parametersLength always 35
+     */
     public U2FApplet(byte[] parameters, short parametersOffset, byte parametersLength) {
         if (parametersLength != 35) {
             ISOException.throwIt(ISO7816.SW_WRONG_DATA);
@@ -392,7 +399,8 @@ public class U2FApplet extends Applet implements ExtendedLength {
             ISOException.throwIt((short) (ISO7816.SW_BYTES_REMAINING_00 + fullLength));
         }
     }
-
+    
+    /* @override */
     public void process(APDU apdu) throws ISOException {
         byte[] buffer = apdu.getBuffer();
         if (selectingApplet()) {
@@ -438,6 +446,7 @@ public class U2FApplet extends Applet implements ExtendedLength {
         }
     }
 
+    /* @override */
     public static void install(byte bArray[], short bOffset, byte bLength) throws ISOException {
         short offset = bOffset;
         offset += (short) (bArray[offset] + 1); // instance
