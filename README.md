@@ -39,6 +39,10 @@ Before using the applet, the attestation certificate shall be loaded using a pro
 
 This implementation has been certified FIDO U2F compliant on December 17, 2015 (U2F100020151217001). See tag [u2f-certif-171215](https://github.com/LedgerHQ/ledger-u2f-javacard/tree/u2f-certif-171215)
   
+# State model
+
+![state model diagram](state-model.png)
+
 # License
 
 This application is licensed under [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
