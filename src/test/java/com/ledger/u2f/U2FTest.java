@@ -297,4 +297,38 @@ public class U2FTest extends SimulatorTestBase {
         byte[] array2 = new byte[]{0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x00, 0x00};
         assertThat(FIDOUtils.compareConstantTime(array1, (short)1, array2, (short)3, (short)3), is(true));
     }
+    
+    @Test
+    public void testSetAttestationCertWrongLength() {
+        prepareApplet((byte) 0, attestationCert.length - 8, attestatioPrivkey);
+
+        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
+        ResponseAPDU certResponse = sim.transmitCommand(certApdu);
+        assertThat(certResponse.getSW(), is(ISO7816.SW_WRONG_DATA));
+    }
+    
+    @Test
+    public void testSetAttestationCertParts() {
+        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        
+        short secondPartLength = (short)32;
+        short secondPartOffset = (short)(attestationCert.length - secondPartLength);
+        
+        byte[] firstPart = new byte[secondPartOffset];
+        System.arraycopy(attestationCert, 0, firstPart, 0, secondPartOffset);
+        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, firstPart);
+        ResponseAPDU certResponse = sim.transmitCommand(certApdu);
+        assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
+        
+        byte[] secondPart = new byte[secondPartLength];
+        System.arraycopy(attestationCert, secondPartOffset, secondPart, 0, secondPartLength);
+        certApdu = new CommandAPDU(0xF0, 0x01, (byte)((secondPartOffset & 0xff00) >> 8), (byte)(secondPartOffset & 0xff), secondPart);
+        certResponse = sim.transmitCommand(certApdu);
+        assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
+        
+        byte[] more = new byte[]{0x01};
+        certApdu = new CommandAPDU(0xF0, 0x01, (byte)((attestationCert.length & 0xff00) >> 8), (byte)(attestationCert.length & 0xff), more);
+        certResponse = sim.transmitCommand(certApdu);
+        assertThat(certResponse.getSW(), is(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED));
+    }
 }
