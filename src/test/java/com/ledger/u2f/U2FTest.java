@@ -25,6 +25,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 public class U2FTest extends SimulatorTestBase {
+    private static final byte FIDO_CLA = (byte) 0x00;
+    private static final byte FIDO_INS_ENROLL = (byte) 0x01;
+    private static final byte FIDO_INS_SIGN = (byte) 0x02;
+    private static final byte FIDO_INS_VERSION = (byte) 0x03;
+    private static final byte ISO_INS_GET_DATA = (byte) 0xC0;
+    private static final byte PROPRIETARY_CLA = (byte) 0xF0;
+    private static final byte FIDO_ADM_SET_ATTESTATION_CERT = (byte) 0x01;
+    private static final byte P1_SIGN_OPERATION = (byte) 0x03;
+    private static final byte P1_SIGN_CHECK_ONLY = (byte) 0x07;
+    private static final int FIDO_SW_TEST_OF_PRESENCE_REQUIRED = 0x6985;
+    private static final int FIDO_SW_INVALID_KEY_HANDLE = ISO7816.SW_WRONG_DATA;
+    private static final byte INSTALL_FLAG_ENABLE_USER_PRESENCE = (byte) 0;
+    private static final byte INSTALL_FLAG_DISABLE_USER_PRESENCE = (byte) 0x01;
+
     private final static byte[] attestatioPrivkey = new byte[]{(byte) 0xf3, (byte) 0xfc, (byte) 0xcc, (byte) 0x0d, (byte) 0x00, (byte) 0xd8, (byte) 0x03, (byte) 0x19, (byte) 0x54, (byte) 0xf9, (byte) 0x08, (byte) 0x64, (byte) 0xd4, (byte) 0x3c, (byte) 0x24, (byte) 0x7f, (byte) 0x4b, (byte) 0xf5, (byte) 0xf0, (byte) 0x66, (byte) 0x5c, (byte) 0x6b, (byte) 0x50, (byte) 0xcc, (byte) 0x17, (byte) 0x74, (byte) 0x9a, (byte) 0x27, (byte) 0xd1, (byte) 0xcf, (byte) 0x76, (byte) 0x64};
     private final static byte[] attestationCert = new byte[]{(byte) 0x30, (byte) 0x82, (byte) 0x01, (byte) 0x3c, (byte) 0x30, (byte) 0x81, (byte) 0xe4, (byte) 0xa0, (byte) 0x03, (byte) 0x02, (byte) 0x01, (byte) 0x02, (byte) 0x02, (byte) 0x0a, (byte) 0x47, (byte) 0x90, (byte) 0x12, (byte) 0x80, (byte) 0x00, (byte) 0x11, (byte) 0x55, (byte) 0x95, (byte) 0x73, (byte) 0x52, (byte) 0x30, (byte) 0x0a, (byte) 0x06, (byte) 0x08, (byte) 0x2a, (byte) 0x86, (byte) 0x48, (byte) 0xce, (byte) 0x3d, (byte) 0x04, (byte) 0x03, (byte) 0x02, (byte) 0x30, (byte) 0x17, (byte) 0x31, (byte) 0x15, (byte) 0x30, (byte) 0x13, (byte) 0x06, (byte) 0x03, (byte) 0x55, (byte) 0x04, (byte) 0x03, (byte) 0x13, (byte) 0x0c, (byte) 0x47, (byte) 0x6e, (byte) 0x75, (byte) 0x62, (byte) 0x62, (byte) 0x79, (byte) 0x20, (byte) 0x50, (byte) 0x69, (byte) 0x6c, (byte) 0x6f, (byte) 0x74, (byte) 0x30, (byte) 0x1e, (byte) 0x17, (byte) 0x0d, (byte) 0x31, (byte) 0x32, (byte) 0x30, (byte) 0x38, (byte) 0x31, (byte) 0x34, (byte) 0x31, (byte) 0x38, (byte) 0x32, (byte) 0x39, (byte) 0x33, (byte) 0x32, (byte) 0x5a, (byte) 0x17, (byte) 0x0d, (byte) 0x31, (byte) 0x33, (byte) 0x30, (byte) 0x38, (byte) 0x31, (byte) 0x34, (byte) 0x31, (byte) 0x38, (byte) 0x32, (byte) 0x39, (byte) 0x33, (byte) 0x32, (byte) 0x5a, (byte) 0x30, (byte) 0x31, (byte) 0x31, (byte) 0x2f, (byte) 0x30, (byte) 0x2d, (byte) 0x06, (byte) 0x03, (byte) 0x55, (byte) 0x04, (byte) 0x03, (byte) 0x13, (byte) 0x26, (byte) 0x50, (byte) 0x69, (byte) 0x6c, (byte) 0x6f, (byte) 0x74, (byte) 0x47, (byte) 0x6e, (byte) 0x75, (byte) 0x62, (byte) 0x62, (byte) 0x79, (byte) 0x2d, (byte) 0x30, (byte) 0x2e, (byte) 0x34, (byte) 0x2e, (byte) 0x31, (byte) 0x2d, (byte) 0x34, (byte) 0x37, (byte) 0x39, (byte) 0x30, (byte) 0x31, (byte) 0x32, (byte) 0x38, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x31, (byte) 0x31, (byte) 0x35, (byte) 0x35, (byte) 0x39, (byte) 0x35, (byte) 0x37, (byte) 0x33, (byte) 0x35, (byte) 0x32, (byte) 0x30, (byte) 0x59, (byte) 0x30, (byte) 0x13, (byte) 0x06, (byte) 0x07, (byte) 0x2a, (byte) 0x86, (byte) 0x48, (byte) 0xce, (byte) 0x3d, (byte) 0x02, (byte) 0x01, (byte) 0x06, (byte) 0x08, (byte) 0x2a, (byte) 0x86, (byte) 0x48, (byte) 0xce, (byte) 0x3d, (byte) 0x03, (byte) 0x01, (byte) 0x07, (byte) 0x03, (byte) 0x42, (byte) 0x00, (byte) 0x04, (byte) 0x8d, (byte) 0x61, (byte) 0x7e, (byte) 0x65, (byte) 0xc9, (byte) 0x50, (byte) 0x8e, (byte) 0x64, (byte) 0xbc, (byte) 0xc5, (byte) 0x67, (byte) 0x3a, (byte) 0xc8, (byte) 0x2a, (byte) 0x67, (byte) 0x99, (byte) 0xda, (byte) 0x3c, (byte) 0x14, (byte) 0x46, (byte) 0x68, (byte) 0x2c, (byte) 0x25, (byte) 0x8c, (byte) 0x46, (byte) 0x3f, (byte) 0xff, (byte) 0xdf, (byte) 0x58, (byte) 0xdf, (byte) 0xd2, (byte) 0xfa, (byte) 0x3e, (byte) 0x6c, (byte) 0x37, (byte) 0x8b, (byte) 0x53, (byte) 0xd7, (byte) 0x95, (byte) 0xc4, (byte) 0xa4, (byte) 0xdf, (byte) 0xfb, (byte) 0x41, (byte) 0x99, (byte) 0xed, (byte) 0xd7, (byte) 0x86, (byte) 0x2f, (byte) 0x23, (byte) 0xab, (byte) 0xaf, (byte) 0x02, (byte) 0x03, (byte) 0xb4, (byte) 0xb8, (byte) 0x91, (byte) 0x1b, (byte) 0xa0, (byte) 0x56, (byte) 0x99, (byte) 0x94, (byte) 0xe1, (byte) 0x01, (byte) 0x30, (byte) 0x0a, (byte) 0x06, (byte) 0x08, (byte) 0x2a, (byte) 0x86, (byte) 0x48, (byte) 0xce, (byte) 0x3d, (byte) 0x04, (byte) 0x03, (byte) 0x02, (byte) 0x03, (byte) 0x47, (byte) 0x00, (byte) 0x30, (byte) 0x44, (byte) 0x02, (byte) 0x20, (byte) 0x60, (byte) 0xcd, (byte) 0xb6, (byte) 0x06, (byte) 0x1e, (byte) 0x9c, (byte) 0x22, (byte) 0x26, (byte) 0x2d, (byte) 0x1a, (byte) 0xac, (byte) 0x1d, (byte) 0x96, (byte) 0xd8, (byte) 0xc7, (byte) 0x08, (byte) 0x29, (byte) 0xb2, (byte) 0x36, (byte) 0x65, (byte) 0x31, (byte) 0xdd, (byte) 0xa2, (byte) 0x68, (byte) 0x83, (byte) 0x2c, (byte) 0xb8, (byte) 0x36, (byte) 0xbc, (byte) 0xd3, (byte) 0x0d, (byte) 0xfa, (byte) 0x02, (byte) 0x20, (byte) 0x63, (byte) 0x1b, (byte) 0x14, (byte) 0x59, (byte) 0xf0, (byte) 0x9e, (byte) 0x63, (byte) 0x30, (byte) 0x05, (byte) 0x57, (byte) 0x22, (byte) 0xc8, (byte) 0xd8, (byte) 0x9b, (byte) 0x7f, (byte) 0x48, (byte) 0x88, (byte) 0x3b, (byte) 0x90, (byte) 0x89, (byte) 0xb8, (byte) 0x8d, (byte) 0x60, (byte) 0xd1, (byte) 0xd9, (byte) 0x79, (byte) 0x59, (byte) 0x02, (byte) 0xb3, (byte) 0x04, (byte) 0x10, (byte) 0xdf};
     private final static byte[] challenge = new byte[]{(byte) 0x41, (byte) 0x42, (byte) 0xd2, (byte) 0x1c, (byte) 0x00, (byte) 0xd9, (byte) 0x4f, (byte) 0xfb, (byte) 0x9d, (byte) 0x50, (byte) 0x4a, (byte) 0xda, (byte) 0x8f, (byte) 0x99, (byte) 0xb7, (byte) 0x21, (byte) 0xf4, (byte) 0xb1, (byte) 0x91, (byte) 0xae, (byte) 0x4e, (byte) 0x37, (byte) 0xca, (byte) 0x01, (byte) 0x40, (byte) 0xf6, (byte) 0x96, (byte) 0xb6, (byte) 0x98, (byte) 0x3c, (byte) 0xfa, (byte) 0xcb};
@@ -42,10 +56,10 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testAttestationCertNotSet() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
         int[] fidoINS = {0x01, 0x02, 0x03};
         for (int ins : fidoINS) {
-            CommandAPDU apdu = new CommandAPDU(0x00, ins, 0, 0);
+            CommandAPDU apdu = new CommandAPDU(FIDO_CLA, ins, 0, 0);
             ResponseAPDU resp = sim.transmitCommand(apdu);
             assertThat(resp.getSW(), is(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED));
         }
@@ -53,18 +67,18 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testSetAttestationCert() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
+        CommandAPDU certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert);
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
         assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
     }
 
     @Test
     public void testSetAttestationCertAgain() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
+        CommandAPDU certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert);
         sim.transmitCommand(certApdu);
 
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
@@ -73,9 +87,9 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testSelectGivesVersion() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
 
         byte[] response = sim.selectAppletWithResult(aid);
         assertThat(response, is(U2F_VERSION_RESP));
@@ -83,24 +97,24 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testGetVersion() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
 
-        ResponseAPDU versionAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x03, 0, 0));
+        ResponseAPDU versionAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_VERSION, 0, 0));
         assertThat(versionAPDU.getBytes(), is(U2F_VERSION_RESP));
     }
 
     @Test
     public void testEnroll() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, CertificateException, InvalidKeySpecException {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
         byte[] enrollData = new byte[64];
         System.arraycopy(challenge, 0, enrollData, 0, 32);
         System.arraycopy(application, 0, enrollData, 32, 32);
 
-        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x01, 0, 0, enrollData, 65535));
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
         assertThat(responseAPDU.getSW(), is(ISO7816.SW_NO_ERROR));
 
         byte[] responseData = responseAPDU.getData();
@@ -144,20 +158,20 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testEnrollGetData() throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException, InvalidKeyException, SignatureException {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
         byte[] enrollData = new byte[64];
         System.arraycopy(challenge, 0, enrollData, 0, 32);
         System.arraycopy(application, 0, enrollData, 32, 32);
 
-        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x01, 0, 0, enrollData));
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData));
         assertThat(responseAPDU.getSW(), is(ISO7816.SW_BYTES_REMAINING_00));
 
         List<byte[]> responses = new LinkedList<>();
         int ne = 256;
         do {
-            ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0xC0, 0, 0, ne));
+            ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, ISO_INS_GET_DATA, 0, 0, ne));
             responses.add(getDataAPDU.getData());
             int nr = getDataAPDU.getNr();
 
@@ -220,9 +234,9 @@ public class U2FTest extends SimulatorTestBase {
 
     @Test
     public void testSignNotEnrolled() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
 
         byte[] keyHandle = new byte[32];
         new Random().nextBytes(keyHandle);
@@ -233,20 +247,20 @@ public class U2FTest extends SimulatorTestBase {
         signData[64] = 32;
         System.arraycopy(keyHandle, 0, signData, 65, 32);
 
-        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0x02, 0x03, 0, signData, 65535));
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_OPERATION, 0, signData, 65535));
         assertThat(responseAPDU.getSW(), is(not(ISO7816.SW_NO_ERROR)));
     }
 
     @Test
     public void testEnrollAndSign() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
         byte[] enrollData = new byte[64];
         System.arraycopy(challenge, 0, enrollData, 0, 32);
         System.arraycopy(application, 0, enrollData, 32, 32);
 
-        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(0x00, 0x01, 0, 0, enrollData, 65535));
+        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
         byte[] responseData = enrollResponse.getData();
 
         sim.reset();
@@ -262,16 +276,16 @@ public class U2FTest extends SimulatorTestBase {
         signData[64] = keyHandleLength;
         System.arraycopy(keyHandle, 0, signData, 65, keyHandleLength);
 
-        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(0x00, 0x02, 0x03, 0, signData, 65535));
+        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_OPERATION, 0, signData, 65535));
         assertThat(signResponse.getSW(), is(ISO7816.SW_NO_ERROR));
     }
 
     @Test
     public void testGetDataNoData() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
 
-        sim.transmitCommand(new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert));
-        ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(0x00, 0xC0, 0, 0));
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        ResponseAPDU getDataAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, ISO_INS_GET_DATA, 0, 0));
         assertThat(getDataAPDU.getSW(), is(ISO7816.SW_CONDITIONS_OF_USE_NOT_SATISFIED));
     }
     
@@ -300,35 +314,190 @@ public class U2FTest extends SimulatorTestBase {
     
     @Test
     public void testSetAttestationCertWrongLength() {
-        prepareApplet((byte) 0, attestationCert.length - 8, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length - 8, attestatioPrivkey);
 
-        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, attestationCert);
+        CommandAPDU certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert);
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
         assertThat(certResponse.getSW(), is(ISO7816.SW_WRONG_DATA));
     }
     
     @Test
     public void testSetAttestationCertParts() {
-        prepareApplet((byte) 0, attestationCert.length, attestatioPrivkey);
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
         
         short secondPartLength = (short)32;
         short secondPartOffset = (short)(attestationCert.length - secondPartLength);
         
         byte[] firstPart = new byte[secondPartOffset];
         System.arraycopy(attestationCert, 0, firstPart, 0, secondPartOffset);
-        CommandAPDU certApdu = new CommandAPDU(0xF0, 0x01, 0, 0, firstPart);
+        CommandAPDU certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, firstPart);
         ResponseAPDU certResponse = sim.transmitCommand(certApdu);
         assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
         
         byte[] secondPart = new byte[secondPartLength];
         System.arraycopy(attestationCert, secondPartOffset, secondPart, 0, secondPartLength);
-        certApdu = new CommandAPDU(0xF0, 0x01, (byte)((secondPartOffset & 0xff00) >> 8), (byte)(secondPartOffset & 0xff), secondPart);
+        certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, (byte)((secondPartOffset & 0xff00) >> 8), (byte)(secondPartOffset & 0xff), secondPart);
         certResponse = sim.transmitCommand(certApdu);
         assertThat(certResponse.getSW(), is(ISO7816.SW_NO_ERROR));
         
         byte[] more = new byte[]{0x01};
-        certApdu = new CommandAPDU(0xF0, 0x01, (byte)((attestationCert.length & 0xff00) >> 8), (byte)(attestationCert.length & 0xff), more);
+        certApdu = new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, (byte)((attestationCert.length & 0xff00) >> 8), (byte)(attestationCert.length & 0xff), more);
         certResponse = sim.transmitCommand(certApdu);
         assertThat(certResponse.getSW(), is(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED));
+    }
+    
+    @Test
+    public void testEnrollWrongLength() {
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        final int omittedDataLength = 1;
+        byte[] enrollData = new byte[64 - omittedDataLength];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32 - omittedDataLength);
+
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        assertThat(responseAPDU.getSW(), is(ISO7816.SW_WRONG_LENGTH));
+    }
+    
+    /*@Test
+    public void testCounterOverflow() {
+        prepareApplet((INSTALL_FLAG_DISABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+        
+        ResponseAPDU responseAPDU;
+        for (long i=0;i<4228250625L - 1;i++) {
+            responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+            assertThat(responseAPDU.getSW(), is(ISO7816.SW_NO_ERROR));
+        }
+        responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        assertThat(responseAPDU.getSW(), is(ISO7816.SW_FILE_FULL));
+    }*/
+    
+    @Test
+    public void testEnrollUserPresence() {
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+        
+        ResponseAPDU responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        assertThat(responseAPDU.getSW(), is(ISO7816.SW_NO_ERROR));
+        
+        responseAPDU = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        assertThat(responseAPDU.getSW(), is(FIDO_SW_TEST_OF_PRESENCE_REQUIRED));
+    }
+    
+    @Test
+    public void testEnrollAndSignWrongLength() {
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        byte[] responseData = enrollResponse.getData();
+
+        sim.reset();
+        sim.selectApplet(aid);
+
+        byte[] signData = new byte[]{0x0F, 0x0F, 0x0F, 0x0F, 0x0F};
+
+        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_OPERATION, 0, signData, 65535));
+        assertThat(signResponse.getSW(), is(ISO7816.SW_WRONG_LENGTH));
+    }
+    
+    @Test
+    public void testEnrollAndSignInvalidKeyHandle() {
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        byte[] responseData = enrollResponse.getData();
+        
+        sim.reset();
+        sim.selectApplet(aid);
+
+        byte keyHandleLength = responseData[66];
+        byte[] keyHandle = new byte[keyHandleLength];
+        System.arraycopy(responseData, 67, keyHandle, 0, keyHandleLength);
+        keyHandle[0] = 0x0F;
+        keyHandle[3] = 0x0F;
+
+        byte[] signData = new byte[65 + keyHandleLength];
+        System.arraycopy(challenge, 0, signData, 0, 32);
+        System.arraycopy(application, 0, signData, 32, 32);
+        signData[64] = keyHandleLength;
+        System.arraycopy(keyHandle, 0, signData, 65, keyHandleLength);
+
+        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_OPERATION, 0, signData, 65535));
+        assertThat(signResponse.getSW(), is(FIDO_SW_INVALID_KEY_HANDLE));
+    }
+    
+    @Test
+    public void testEnrollAndSignUserPresence() {
+        prepareApplet(INSTALL_FLAG_ENABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        byte[] responseData = enrollResponse.getData();
+
+        byte keyHandleLength = responseData[66];
+        byte[] keyHandle = new byte[keyHandleLength];
+        System.arraycopy(responseData, 67, keyHandle, 0, keyHandleLength);
+
+        byte[] signData = new byte[65 + keyHandleLength];
+        System.arraycopy(challenge, 0, signData, 0, 32);
+        System.arraycopy(application, 0, signData, 32, 32);
+        signData[64] = keyHandleLength;
+        System.arraycopy(keyHandle, 0, signData, 65, keyHandleLength);
+
+        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_OPERATION, 0, signData, 65535));
+        assertThat(signResponse.getSW(), is(FIDO_SW_TEST_OF_PRESENCE_REQUIRED));
+    }
+    
+    @Test
+    public void testEnrollAndSignCheckOnly() {
+        prepareApplet(INSTALL_FLAG_DISABLE_USER_PRESENCE, attestationCert.length, attestatioPrivkey);
+
+        sim.transmitCommand(new CommandAPDU(PROPRIETARY_CLA, FIDO_ADM_SET_ATTESTATION_CERT, 0, 0, attestationCert));
+        byte[] enrollData = new byte[64];
+        System.arraycopy(challenge, 0, enrollData, 0, 32);
+        System.arraycopy(application, 0, enrollData, 32, 32);
+
+        ResponseAPDU enrollResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_ENROLL, 0, 0, enrollData, 65535));
+        byte[] responseData = enrollResponse.getData();
+        
+        sim.reset();
+        sim.selectApplet(aid);
+
+        byte keyHandleLength = responseData[66];
+        byte[] keyHandle = new byte[keyHandleLength];
+        System.arraycopy(responseData, 67, keyHandle, 0, keyHandleLength);
+
+        byte[] signData = new byte[65 + keyHandleLength];
+        System.arraycopy(challenge, 0, signData, 0, 32);
+        System.arraycopy(application, 0, signData, 32, 32);
+        signData[64] = keyHandleLength;
+        System.arraycopy(keyHandle, 0, signData, 65, keyHandleLength);
+
+        ResponseAPDU signResponse = sim.transmitCommand(new CommandAPDU(FIDO_CLA, FIDO_INS_SIGN, P1_SIGN_CHECK_ONLY, 0, signData, 65535));
+        assertThat(signResponse.getSW(), is(FIDO_SW_TEST_OF_PRESENCE_REQUIRED));
     }
 }
