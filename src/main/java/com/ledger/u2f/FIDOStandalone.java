@@ -58,7 +58,17 @@ public class FIDOStandalone implements FIDOAPI {
     }
 
     /**
-     * Combine bytes of two arrays into the target array.
+     * Interleave two byte arrays into the target one, nibble by nibble.
+     * Example:
+     *  array1 =  [0x12, 0x34]
+     *  array2 =  [0xab, 0xcd]
+     *         -> [0x1a, 0x2b, 0x3c, 0x4d]
+     * <p>
+     * This is used to interleave the generated private key and the application parameter into two AES-CBC blocks,
+     * as not doing so would result in the application parameter being encrypted as a block with an all zero IV which
+     * would always result in the same first block for all generated private keys with the same application parameter
+     * wrapped under the same wrapping key, which would break privacy of U2F.
+     *
      * @param array1
      * @param array1Offset
      * @param array2
@@ -77,7 +87,11 @@ public class FIDOStandalone implements FIDOAPI {
     }
 
     /**
-     * Separate bytes of two interleaved arrays.
+     * Deinterleave a byte array back into two arrays of half size.
+     *  Example:
+     *  src = [0x1a, 0x2b, 0x3c, 0x4d]
+     *     -> [0x12, 0x34] and [0xab, 0xcd]
+     *
      * @param src
      * @param srcOffset
      * @param array1

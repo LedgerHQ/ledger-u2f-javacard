@@ -23,7 +23,10 @@ import javacard.security.ECPrivateKey;
 
 public interface FIDOAPI {
     /**
-     * Generate a new key pair and wrap it.
+     * Generate a new KeyPair over NIST P-256, for application of <code>applicationParameter</code>, export the
+     * public key into <code>publicKey</code> at <code>publicKeyOffset</code> and export the wrapped private key
+     * and application parameter into the <code>keyHandle</code> at <code>keyHandleOffset</code>.
+     *
      * @param applicationParameter
      * @param applicationParameterOffset
      * @param generatedPrivateKey not used
@@ -36,7 +39,10 @@ public interface FIDOAPI {
     short generateKeyAndWrap(byte[] applicationParameter, short applicationParameterOffset, ECPrivateKey generatedPrivateKey, byte[] publicKey, short publicKeyOffset, byte[] keyHandle, short keyHandleOffset);
 
     /**
-     * Unwrap a previously wrapped key.
+     * Unwrap a <code>keyHandle</code> at <code>keyHandleOffset</code> with <code>keyHandleLength</code> and set
+     * the unwrapped private key into <code>unwrappedPrivateKey</code> if the unwrapping was successful (if
+     * <code>applicationParameter</code> at <code>applicationParameterOffset</code> was the same as the unwrapped one).
+     *
      * @param keyHandle
      * @param keyHandleOffset
      * @param keyHandleLength not used, assumed 64
