@@ -29,7 +29,6 @@ import javacard.framework.Util;
 import javacard.security.KeyBuilder;
 import javacardx.apdu.ExtendedLength;
 import javacard.security.ECPrivateKey;
-import javacard.security.ECPublicKey;
 import javacard.security.Signature;
 import javacard.security.CryptoException;
 
