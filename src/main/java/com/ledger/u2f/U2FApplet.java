@@ -35,19 +35,19 @@ import javacard.security.CryptoException;
 
 public class U2FApplet extends Applet implements ExtendedLength {
 
-    private static byte flags;
-    private static byte[] counter;
-    private static byte[] scratchPersistent;
-    private static byte[] scratch;
-    private static byte[] attestationCertificate;
-    private static boolean attestationCertificateSet;
-    private static ECPrivateKey attestationPrivateKey;
-    private static ECPrivateKey localPrivateKey;
-    private static boolean localPrivateTransient;
-    private static boolean counterOverflowed;
-    private static Signature attestationSignature;
-    private static Signature localSignature;
-    private static FIDOAPI fidoImpl;
+    private byte flags;
+    private byte[] counter;
+    private byte[] scratchPersistent;
+    private byte[] scratch;
+    private byte[] attestationCertificate;
+    private boolean attestationCertificateSet;
+    private ECPrivateKey attestationPrivateKey;
+    private ECPrivateKey localPrivateKey;
+    private boolean localPrivateTransient;
+    private boolean counterOverflowed;
+    private Signature attestationSignature;
+    private Signature localSignature;
+    private FIDOAPI fidoImpl;
 
     private static final byte VERSION[] = { 'U', '2', 'F', '_', 'V', '2' };
 
