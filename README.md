@@ -1,6 +1,8 @@
 Ledger U2F Applet
 =================
 
+[![Build status](https://travis-ci.org/LedgerHQ/ledger-u2f-javacard.svg?branch=master)](https://travis-ci.org/LedgerHQ/ledger-u2f-javacard) [![Codecov](https://img.shields.io/codecov/c/github/ledgerhq/ledger-u2f-javacard.svg)](https://codecov.io/gh/ledgerhq/ledger-u2f-javacard)
+
 # Overview
 
 This applet is a Java Card implementation of the [FIDO Alliance U2F standard](https://fidoalliance.org/)

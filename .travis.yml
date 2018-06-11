@@ -1,0 +1,12 @@
+language: java
+
+jdk:
+  - oraclejdk8
+
+script:
+  - ./gradlew check --info
+  - ./gradlew buildJavaCard --info
+  - ./gradlew jacocoTestReport
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
