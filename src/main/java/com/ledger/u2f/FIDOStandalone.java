@@ -46,10 +46,10 @@ public class FIDOStandalone implements FIDOAPI {
         (ECPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PRIVATE, KeyBuilder.LENGTH_EC_FP_256, false));
         Secp256r1.setCommonCurveParameters((ECKey) keyPair.getPrivate());
         Secp256r1.setCommonCurveParameters((ECKey) keyPair.getPublic());
-        random = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
+        random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         // Initialize the unique wrapping key
         chipKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_256, false);
-        random.nextBytes(scratch, (short) 0, (short) 32);
+        random.generateData(scratch, (short) 0, (short) 32);
         chipKey.setKey(scratch, (short) 0);
         cipherEncrypt = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
         cipherEncrypt.init(chipKey, Cipher.MODE_ENCRYPT, IV_ZERO_AES, (short) 0, (short) IV_ZERO_AES.length);
@@ -75,7 +75,7 @@ public class FIDOStandalone implements FIDOAPI {
      * @param array2Offset
      * @param target
      * @param targetOffset
-     * @param length 
+     * @param length
      */
     private static void interleave(byte[] array1, short array1Offset, byte[] array2, short array2Offset, byte[] target, short targetOffset, short length) {
         for (short i = 0; i < length; i++) {
@@ -98,7 +98,7 @@ public class FIDOStandalone implements FIDOAPI {
      * @param array1Offset
      * @param array2
      * @param array2Offset
-     * @param length 
+     * @param length
      */
     private static void deinterleave(byte[] src, short srcOffset, byte[] array1, short array1Offset, byte[] array2, short array2Offset, short length) {
         for (short i = 0; i < length; i++) {
