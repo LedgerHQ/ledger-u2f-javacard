@@ -35,7 +35,7 @@ dependencies {
     // testCompile group: 'junit', name: 'junit', version: '4.12'
     // testCompile 'org.testng:testng:6.1.1'
 
-    jcardsim 'com.licel:jcardsim:3.0.4'
+    jcardsim 'com.licel:jcardsim:3.0.5'
 }
 
 test {
@@ -44,15 +44,10 @@ test {
 }
 
 // JavaCard SDKs and libraries
-final def JC212 = libsSdk + '/jc212_kit'
-final def JC221 = libsSdk + '/jc221_kit'
-final def JC222 = libsSdk + '/jc222_kit'
-final def JC303 = libsSdk + '/jc303_kit'
-final def JC304 = libsSdk + '/jc304_kit'
 final def JC305 = libsSdk + '/jc305u1_kit'
 
 // Which JavaCard SDK to use - select
-final def JC_SELECTED = JC304
+final def JC_SELECTED = JC305
 
 javacard {
 
