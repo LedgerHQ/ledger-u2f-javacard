@@ -11,7 +11,7 @@ It uses no proprietary vendor API and is freely available on [Ledger Unplugged](
 
 # Building 
 
-  - Set the environment variable `JC_HOME` to the folder containg the [Java Card Development Kit 3.0.2](http://www.oracle.com/technetwork/java/embedded/javacard/downloads/index.html)
+  - Set the environment variable `JC_HOME` to the folder containg the [Java Card Development Kit 3.0.5](http://www.oracle.com/technetwork/java/embedded/javacard/downloads/index.html)
   - Run `gradlew convertJavacard`
 
 # Installing 
