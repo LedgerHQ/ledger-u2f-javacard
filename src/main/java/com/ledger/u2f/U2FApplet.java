@@ -202,17 +202,18 @@ public class U2FApplet extends Applet implements ExtendedLength {
         attestationSignature.update(scratch, SCRATCH_KEY_HANDLE_OFFSET, keyHandleLength);
         attestationSignature.update(scratch, SCRATCH_PUBLIC_KEY_OFFSET, (short) 65);
         outOffset = (short) (ENROLL_PUBLIC_KEY_OFFSET + 65 + 1 + keyHandleLength);
+        short signatureSize = attestationSignature.sign(buffer, (short) 0, (short) 0, scratch, SCRATCH_SIGNATURE_OFFSET);
+
         if (extendedLength) {
             // If using extended length, the message can be completed and sent immediately
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_EXTENDED;
-            outOffset = Util.arrayCopyNonAtomic(scratch, SCRATCH_PAD, buffer, (short) 0, outOffset);
-            outOffset = Util.arrayCopyNonAtomic(attestationCertificate, (short) 0, buffer, outOffset, (short) attestationCertificate.length);
-            short signatureSize = attestationSignature.sign(buffer, (short) 0, (short) 0, buffer, outOffset);
-            outOffset += signatureSize;
-            apdu.setOutgoingAndSend((short) 0, outOffset);
+            apdu.setOutgoing();
+            apdu.setOutgoingLength((short) (outOffset + attestationCertificate.length + signatureSize));
+            apdu.sendBytesLong(scratch, SCRATCH_PAD, outOffset);
+            apdu.sendBytesLong(attestationCertificate, (short) 0, (short) attestationCertificate.length);
+            apdu.sendBytesLong(scratch, SCRATCH_SIGNATURE_OFFSET, signatureSize);
         } else {
             // Otherwise, keep the signature and proceed to send the first chunk
-            short signatureSize = attestationSignature.sign(buffer, (short) 0, (short) 0, scratch, SCRATCH_SIGNATURE_OFFSET);
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED;
             Util.setShort(scratch, SCRATCH_CURRENT_OFFSET, (short) 0);
             Util.setShort(scratch, SCRATCH_SIGNATURE_LENGTH, signatureSize);
@@ -301,8 +302,9 @@ public class U2FApplet extends Applet implements ExtendedLength {
         if (extendedLength) {
             // If using extended length, the message can be completed and sent immediately
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_EXTENDED;
-            Util.arrayCopyNonAtomic(scratch, SCRATCH_PAD, buffer, (short) 0, outOffset);
-            apdu.setOutgoingAndSend((short) 0, (short) (outOffset - SCRATCH_PAD));
+            apdu.setOutgoing();
+            apdu.setOutgoingLength((short) (outOffset - SCRATCH_PAD));
+            apdu.sendBytesLong(scratch, SCRATCH_PAD, (short)(outOffset - SCRATCH_PAD));
         } else {
             // Otherwise send the first chunk
             scratch[SCRATCH_TRANSPORT_STATE] = TRANSPORT_NOT_EXTENDED;
